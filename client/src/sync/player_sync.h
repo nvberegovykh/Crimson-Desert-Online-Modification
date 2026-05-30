@@ -12,6 +12,7 @@
 #include <string>
 
 #include "../game/memory.h"
+#include "../net/protocol.h"
 #include <nlohmann/json.hpp>
 
 namespace cdmp {
@@ -39,6 +40,15 @@ struct RemotePlayer {
     uintptr_t entityBase = 0;    // resolved remote entity slot, if any
     bool isHost = false;
     int ping = 0;
+
+    // Parkour / traversal + full gameplay state from the latest packet.
+    PlayerStatePacket gameplay;
+    bool prevDead = false; // tracks isDead edge for respawn teleport
+
+    // Fallback traversal heuristic: how many of the last updates changed the
+    // animation id. Used only when traversal offsets weren't resolved.
+    int32_t prevAnimId = 0;
+    int animChangeStreak = 0;
 };
 
 class PlayerSync {
@@ -60,6 +70,9 @@ public:
     // Snapshot for the in-session UI.
     std::vector<RemotePlayer> GetRemotePlayers();
 
+    // Resolved remote entity slot for a player id, or 0 if unknown/unresolved.
+    uintptr_t GetRemoteEntityBase(const std::string& id);
+
 private:
     void SendLocalState(double nowMs);
     void ApplyRemoteState(double nowMs);
@@ -70,6 +83,16 @@ private:
 
     std::mutex mutex_;
     std::map<std::string, RemotePlayer> remotes_;
+
+    // Build the local traversal + gameplay state by reading scanner offsets.
+    PlayerStatePacket ReadLocalGameplay(uintptr_t base);
+    // Serialize gameplay fields into a player JSON entry (only present ones).
+    void EmitGameplayJson(nlohmann::json& player, const PlayerStatePacket& gp);
+    // Parse gameplay fields out of an incoming player JSON entry.
+    void ParseGameplay(const nlohmann::json& p, PlayerStatePacket& gp);
+    // Apply per-mode traversal interpolation + gameplay writes for one remote.
+    void ApplyTraversal(RemotePlayer& rp, double nowMs, float baseT, int mode);
+    void ApplyGameplayWrites(RemotePlayer& rp);
 
     // Last sent values for change detection.
     Vec3 lastPos_;

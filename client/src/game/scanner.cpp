@@ -168,6 +168,11 @@ const char* kItemUseSig =
 const char* kAttackSig =
     "48 89 5C 24 ?? 57 48 83 EC ?? 8B FA 48 8B D9 83";
 
+// Anchor for the skill/magic activation function prologue. Same calling
+// convention as the attack trigger but takes a skill id in edx.
+const char* kSkillSig =
+    "48 89 5C 24 ?? 48 89 6C 24 ?? 57 48 83 EC ?? 8B EA 48 8B D9";
+
 // Resolve a RIP-relative reference at `addr` where the 4-byte displacement
 // begins at addr+dispOffset and the instruction length is `insnLen`.
 uintptr_t ResolveRipRelative(uintptr_t addr, int dispOffset, int insnLen) {
@@ -239,6 +244,23 @@ bool WalkEntityLayout(uintptr_t entity) {
     g_offsets.offCombatFlags = g_offsets.offAnimId + 0x10;
     g_offsets.offEntityId = 0x08; // network id near the vtable in BDO entities
 
+    // --- Parkour / traversal heuristics ----------------------------------
+    // The traversal flag bitmask sits just past the movement flags; its high
+    // bits encode the active TraversalMode. The engine writes the intended
+    // landing/vault target as a Vec3 a little further into the locomotion block.
+    g_offsets.traversalFlagsOffset = g_offsets.offMoveFlags + 0x04;
+    g_offsets.traversalTargetPosOffset = g_offsets.offVelocityX + 0x20;
+
+    // --- Full gameplay sync component heuristics --------------------------
+    // These are component blocks/pointers located by their typical position
+    // relative to the transform/health fields in the BDO/BLACKSPACE entity.
+    g_offsets.skillComponentOffset = g_offsets.offHealth + 0x40;
+    g_offsets.statusComponentOffset = g_offsets.offHealth + 0x10;
+    g_offsets.vfxComponentOffset = g_offsets.offPositionX + 0x80;
+    g_offsets.equipmentComponentOffset = g_offsets.offHealth + 0x80;
+    g_offsets.mountEntityPtrOffset = g_offsets.offPositionX + 0x100;
+    g_offsets.dodgeComponentOffset = g_offsets.offVelocityX + 0x30;
+
     return true;
 }
 
@@ -274,6 +296,7 @@ bool LoadFromCache(const std::string& hash) {
     rd("itemCountPtr", g_offsets.itemCountPtr);
     rd("itemUseFn", g_offsets.itemUseFn);
     rd("attackTriggerFn", g_offsets.attackTriggerFn);
+    rd("skillTriggerFn", g_offsets.skillTriggerFn);
     rd("offPositionX", g_offsets.offPositionX);
     rd("offVelocityX", g_offsets.offVelocityX);
     rd("offRotationYaw", g_offsets.offRotationYaw);
@@ -286,6 +309,14 @@ bool LoadFromCache(const std::string& hash) {
     rd("offCombatFlags", g_offsets.offCombatFlags);
     rd("offBlendWeight", g_offsets.offBlendWeight);
     rd("offEntityId", g_offsets.offEntityId);
+    rd("traversalFlagsOffset", g_offsets.traversalFlagsOffset);
+    rd("traversalTargetPosOffset", g_offsets.traversalTargetPosOffset);
+    rd("skillComponentOffset", g_offsets.skillComponentOffset);
+    rd("vfxComponentOffset", g_offsets.vfxComponentOffset);
+    rd("statusComponentOffset", g_offsets.statusComponentOffset);
+    rd("equipmentComponentOffset", g_offsets.equipmentComponentOffset);
+    rd("mountEntityPtrOffset", g_offsets.mountEntityPtrOffset);
+    rd("dodgeComponentOffset", g_offsets.dodgeComponentOffset);
     rd("itemStride", g_offsets.itemStride);
     rd("offItemId", g_offsets.offItemId);
     rd("offItemQuantity", g_offsets.offItemQuantity);
@@ -321,6 +352,7 @@ void SaveOffsetCache() {
     o["itemCountPtr"] = g_offsets.itemCountPtr;
     o["itemUseFn"] = g_offsets.itemUseFn;
     o["attackTriggerFn"] = g_offsets.attackTriggerFn;
+    o["skillTriggerFn"] = g_offsets.skillTriggerFn;
     o["offPositionX"] = g_offsets.offPositionX;
     o["offVelocityX"] = g_offsets.offVelocityX;
     o["offRotationYaw"] = g_offsets.offRotationYaw;
@@ -333,6 +365,14 @@ void SaveOffsetCache() {
     o["offCombatFlags"] = g_offsets.offCombatFlags;
     o["offBlendWeight"] = g_offsets.offBlendWeight;
     o["offEntityId"] = g_offsets.offEntityId;
+    o["traversalFlagsOffset"] = g_offsets.traversalFlagsOffset;
+    o["traversalTargetPosOffset"] = g_offsets.traversalTargetPosOffset;
+    o["skillComponentOffset"] = g_offsets.skillComponentOffset;
+    o["vfxComponentOffset"] = g_offsets.vfxComponentOffset;
+    o["statusComponentOffset"] = g_offsets.statusComponentOffset;
+    o["equipmentComponentOffset"] = g_offsets.equipmentComponentOffset;
+    o["mountEntityPtrOffset"] = g_offsets.mountEntityPtrOffset;
+    o["dodgeComponentOffset"] = g_offsets.dodgeComponentOffset;
     o["itemStride"] = g_offsets.itemStride;
     o["offItemId"] = g_offsets.offItemId;
     o["offItemQuantity"] = g_offsets.offItemQuantity;
@@ -382,6 +422,7 @@ bool ResolveOffsets() {
     // 3) Item-use and attack functions.
     g_offsets.itemUseFn = ScanPattern(nullptr, kItemUseSig);
     g_offsets.attackTriggerFn = ScanPattern(nullptr, kAttackSig);
+    g_offsets.skillTriggerFn = ScanPattern(nullptr, kSkillSig);
 
     // 4) Walk the live entity struct to identify field offsets.
     const uintptr_t entity = GetLocalPlayerBase();

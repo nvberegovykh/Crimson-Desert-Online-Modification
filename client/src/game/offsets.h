@@ -19,6 +19,7 @@ struct GameOffsets {
     uintptr_t itemCountPtr = 0;    // address of the item-count integer
     uintptr_t itemUseFn = 0;       // item interaction function
     uintptr_t attackTriggerFn = 0; // melee/attack trigger function
+    uintptr_t skillTriggerFn = 0;  // skill/magic activation function
 
     // --- Field offsets within the player entity struct --------------------
     uint32_t offPositionX = 0;     // float[3] world position
@@ -33,6 +34,20 @@ struct GameOffsets {
     uint32_t offCombatFlags = 0;   // uint32 combat bitmask
     uint32_t offBlendWeight = 0;   // float locomotion blend weight
     uint32_t offEntityId = 0;      // uint64 entity network id
+
+    // --- Parkour / traversal (Task 1) -------------------------------------
+    uint32_t traversalFlagsOffset = 0;   // bitmask near velocity; high bits=mode
+    uint32_t traversalTargetPosOffset = 0; // Vec3 written by engine on vault/climb
+
+    // --- Full gameplay sync component offsets (Task 2) --------------------
+    // Each is a byte offset from the entity base to a component or field. A
+    // value of 0 means the scanner couldn't resolve it; callers must skip.
+    uint32_t skillComponentOffset = 0;     // combat/skill component near health
+    uint32_t vfxComponentOffset = 0;       // pointer near entity transform
+    uint32_t statusComponentOffset = 0;    // status bitmask near health
+    uint32_t equipmentComponentOffset = 0; // equipment block near entity base
+    uint32_t mountEntityPtrOffset = 0;     // pointer to mount entity in player
+    uint32_t dodgeComponentOffset = 0;     // movement/dodge block near velocity
 
     // Item struct size and field offsets used when appending the beacon.
     uint32_t itemStride = 0;       // bytes per item slot
