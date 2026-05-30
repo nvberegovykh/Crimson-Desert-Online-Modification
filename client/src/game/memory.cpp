@@ -59,9 +59,13 @@ uintptr_t GetLocalPlayerBase() {
     return SafeRead<uintptr_t>(g_offsets.playerBasePtr);
 }
 
+// NOTE: offset 0 is a legitimate field offset (e.g. item id at slot+0x00 and the
+// standalone item-count integer). Only the base pointer is checked here; the
+// SafeRead/SafeWrite helpers fail closed via IsReadable / VirtualProtect.
+
 Vec3 ReadVec3(uintptr_t base, uint32_t offset) {
     Vec3 v;
-    if (base == 0 || offset == 0) return v;
+    if (base == 0) return v;
     v.x = SafeRead<float>(base + offset + 0);
     v.y = SafeRead<float>(base + offset + 4);
     v.z = SafeRead<float>(base + offset + 8);
@@ -69,44 +73,44 @@ Vec3 ReadVec3(uintptr_t base, uint32_t offset) {
 }
 
 void WriteVec3(uintptr_t base, uint32_t offset, const Vec3& v) {
-    if (base == 0 || offset == 0) return;
+    if (base == 0) return;
     SafeWrite<float>(base + offset + 0, v.x);
     SafeWrite<float>(base + offset + 4, v.y);
     SafeWrite<float>(base + offset + 8, v.z);
 }
 
 float ReadFloat(uintptr_t base, uint32_t offset) {
-    if (base == 0 || offset == 0) return 0.f;
+    if (base == 0) return 0.f;
     return SafeRead<float>(base + offset);
 }
 
 void WriteFloat(uintptr_t base, uint32_t offset, float value) {
-    if (base == 0 || offset == 0) return;
+    if (base == 0) return;
     SafeWrite<float>(base + offset, value);
 }
 
 int32_t ReadInt(uintptr_t base, uint32_t offset) {
-    if (base == 0 || offset == 0) return 0;
+    if (base == 0) return 0;
     return SafeRead<int32_t>(base + offset);
 }
 
 void WriteInt(uintptr_t base, uint32_t offset, int32_t value) {
-    if (base == 0 || offset == 0) return;
+    if (base == 0) return;
     SafeWrite<int32_t>(base + offset, value);
 }
 
 uint32_t ReadU32(uintptr_t base, uint32_t offset) {
-    if (base == 0 || offset == 0) return 0;
+    if (base == 0) return 0;
     return SafeRead<uint32_t>(base + offset);
 }
 
 void WriteU32(uintptr_t base, uint32_t offset, uint32_t value) {
-    if (base == 0 || offset == 0) return;
+    if (base == 0) return;
     SafeWrite<uint32_t>(base + offset, value);
 }
 
 uint64_t ReadU64(uintptr_t base, uint32_t offset) {
-    if (base == 0 || offset == 0) return 0;
+    if (base == 0) return 0;
     return SafeRead<uint64_t>(base + offset);
 }
 

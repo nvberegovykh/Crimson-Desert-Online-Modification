@@ -30,6 +30,7 @@ function readBody(req: http.IncomingMessage): Promise<ParsedBody> {
       size += c.length;
       if (size > 1_000_000) {
         req.destroy();
+        resolve({});
         return;
       }
       chunks.push(c);
