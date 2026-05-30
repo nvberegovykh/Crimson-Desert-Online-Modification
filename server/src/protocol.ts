@@ -26,6 +26,10 @@ export enum PacketType {
   LOOT_TAKEN = "LOOT_TAKEN",
   CUTSCENE_START = "CUTSCENE_START",
   CUTSCENE_END = "CUTSCENE_END",
+  PUZZLE_START = "PUZZLE_START",
+  PUZZLE_TOKEN = "PUZZLE_TOKEN",
+  PUZZLE_PASS = "PUZZLE_PASS",
+  PUZZLE_END = "PUZZLE_END",
 }
 
 /** Generic envelope every packet uses on the wire. */
@@ -159,6 +163,25 @@ export interface LootTakenPayload {
 export interface CutscenePayload {
   /** Player entering/leaving the cutscene. */
   playerId: string;
+}
+
+export interface PuzzleStartPayload {
+  puzzleId: string;
+}
+
+export interface PuzzlePassPayload {
+  puzzleId: string;
+}
+
+export interface PuzzleEndPayload {
+  puzzleId: string;
+}
+
+export interface PuzzleTokenPayload {
+  puzzleId: string;
+  controllerId: string;
+  remainingMs: number;
+  queue: string[];
 }
 
 export const PROTOCOL_VERSION = 1;

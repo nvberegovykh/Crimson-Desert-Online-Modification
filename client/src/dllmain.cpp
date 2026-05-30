@@ -16,6 +16,7 @@
 #include "inventory/inventory_hook.h"
 #include "sync/combat_sync.h"
 #include "sync/cutscene_sync.h"
+#include "sync/puzzle_sync.h"
 #include "session.h"
 #include "util/log.h"
 
@@ -63,6 +64,9 @@ DWORD WINAPI InitThread(LPVOID) {
     // 8) Cutscene detection (function hook + poll fallback).
     cdmp::CutsceneSync::Get().Init();
 
+    // 9) Puzzle control rotation (input hook gating + token UI).
+    cdmp::PuzzleSync::Get().Init();
+
     g_initialized = true;
     CDMP_LOG_INFO("CD Multiplayer client ready");
     return 0;
@@ -70,6 +74,7 @@ DWORD WINAPI InitThread(LPVOID) {
 
 void Shutdown() {
     if (!g_initialized) return;
+    cdmp::PuzzleSync::Get().Shutdown();
     cdmp::CutsceneSync::Get().Shutdown();
     cdmp::InventoryHook::Get().Shutdown();
     cdmp::RemoveRenderHook();

@@ -21,6 +21,7 @@ import {
   type PlayerState,
   type EnemyState,
 } from "./state";
+import { PuzzleManager } from "./puzzle";
 
 const MAX_PLAYERS_HARD = 8;
 const INVITE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I
@@ -51,6 +52,7 @@ export class Room {
   private hostId: string;
   private readonly connections = new Map<string, Connection>();
   readonly state: ServerState;
+  readonly puzzleManager = new PuzzleManager();
 
   constructor(opts: {
     hostId: string;
@@ -106,6 +108,10 @@ export class Room {
     return this.connections.get(playerId);
   }
 
+  getPlayerIds(): string[] {
+    return [...this.connections.keys()];
+  }
+
   /**
    * Adds a player to the room. Caller is responsible for password / capacity
    * checks. Returns the freshly created PlayerState.
@@ -135,6 +141,7 @@ export class Room {
     if (!conn) return this.isEmpty();
     this.connections.delete(playerId);
     this.state.removePlayer(playerId);
+    this.puzzleManager.onPlayerDisconnect(playerId, this);
 
     const leavePayload: PlayerLeavePayload = { playerId };
     this.broadcast(encode(PacketType.PLAYER_LEAVE, leavePayload));

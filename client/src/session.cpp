@@ -2,9 +2,11 @@
 
 #include "session.h"
 #include "sync/cutscene_sync.h"
+#include "sync/puzzle_sync.h"
 #include "util/log.h"
 
 #include <windows.h>
+#include <vector>
 
 namespace cdmp {
 
@@ -208,6 +210,25 @@ void Session::OnPacket(PacketType type, const nlohmann::json& d) {
         case PacketType::CUTSCENE_END:
             playerSync_.SetRemoteCutscene(d.value("playerId", std::string()), false);
             break;
+        case PacketType::PUZZLE_START:
+            PuzzleSync::Get().OnPuzzleStart(d.value("puzzleId", std::string()));
+            break;
+        case PacketType::PUZZLE_TOKEN: {
+            std::vector<std::string> queue;
+            if (d.contains("queue") && d["queue"].is_array()) {
+                for (const auto& q : d["queue"]) {
+                    queue.push_back(q.get<std::string>());
+                }
+            }
+            PuzzleSync::Get().OnPuzzleToken(
+                d.value("puzzleId", std::string()),
+                d.value("controllerId", std::string()),
+                d.value("remainingMs", 0), queue);
+            break;
+        }
+        case PacketType::PUZZLE_END:
+            PuzzleSync::Get().OnPuzzleEnd(d.value("puzzleId", std::string()));
+            break;
         case PacketType::KICK: {
             std::lock_guard<std::mutex> lock(stateMutex_);
             lastError_ = "Kicked: " + d.value("reason", std::string());
@@ -230,6 +251,7 @@ void Session::Tick() {
     const double now = static_cast<double>(GetTickCount64());
     if (status_.load() == SessionStatus::InSession) {
         CutsceneSync::Get().Poll(now);
+        PuzzleSync::Get().Tick(now);
         playerSync_.Tick(now);
         if (now - lastPingMs_ > 2000.0) {
             lastPingMs_ = now;

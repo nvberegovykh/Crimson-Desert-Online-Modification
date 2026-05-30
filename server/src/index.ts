@@ -27,6 +27,8 @@ import {
   type PongPayload,
   type ServerInfoPayload,
   type LootTakenPayload,
+  type PuzzleStartPayload,
+  type PuzzlePassPayload,
 } from "./protocol";
 import type { PlayerState, EnemyState } from "./state";
 
@@ -130,6 +132,12 @@ function handlePacket(
       break;
     case PacketType.CUTSCENE_END:
       onCutscene(session, manager, false);
+      break;
+    case PacketType.PUZZLE_START:
+      onPuzzleStart(session, payload as PuzzleStartPayload, manager);
+      break;
+    case PacketType.PUZZLE_PASS:
+      onPuzzlePass(session, payload as PuzzlePassPayload, manager);
       break;
     case PacketType.PING:
       onPing(session, payload as PingPayload, manager);
@@ -371,6 +379,30 @@ function onCutscene(
   // A client may only toggle its own cutscene state; the room broadcasts the
   // change to everyone else.
   room.setCutscene(session.playerId, active);
+}
+
+function onPuzzleStart(
+  session: Session,
+  payload: PuzzleStartPayload,
+  manager: RoomManager
+): void {
+  const room = manager.getRoomForPlayer(session.playerId);
+  if (!room || !payload.puzzleId) return;
+  room.puzzleManager.startPuzzle(payload.puzzleId, room.getPlayerIds(), room);
+}
+
+function onPuzzlePass(
+  session: Session,
+  payload: PuzzlePassPayload,
+  manager: RoomManager
+): void {
+  const room = manager.getRoomForPlayer(session.playerId);
+  if (!room || !payload.puzzleId) return;
+  room.puzzleManager.handlePuzzlePass(
+    payload.puzzleId,
+    session.playerId,
+    room
+  );
 }
 
 function onPing(

@@ -2,10 +2,12 @@
 
 #include "modal.h"
 #include "../session.h"
+#include "../sync/puzzle_sync.h"
 #include "../util/log.h"
 
 #include <windows.h>
 #include <cctype>
+#include <cstdio>
 #include <cstring>
 
 #include <imgui.h>
@@ -259,6 +261,41 @@ void Modal::RenderInSession() {
             ImGui::TextUnformatted(p.isHost ? "*" : "");
         }
         ImGui::EndTable();
+    }
+
+    PuzzleSync& puzzle = PuzzleSync::Get();
+    if (puzzle.PuzzleActive()) {
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.4f, 1.0f), "Puzzle Active");
+
+        const std::string controllerId = puzzle.CurrentControllerId();
+        std::string controllerLabel = controllerId;
+        for (const RemotePlayer& p : sess.Players().GetRemotePlayers()) {
+            if (p.id == controllerId && !p.name.empty()) {
+                controllerLabel = p.name;
+                break;
+            }
+        }
+        const bool localControls = puzzle.IsLocalController();
+        if (localControls) controllerLabel = "You";
+        ImGui::Text("Controller: %s",
+                    controllerLabel.empty() ? "(waiting)" : controllerLabel.c_str());
+
+        // Countdown until the token auto-rotates (30s window).
+        const int remainingMs = puzzle.TokenTimeRemaining();
+        const float frac = remainingMs > 0
+                               ? static_cast<float>(remainingMs) / 30000.f
+                               : 0.f;
+        char overlay[32];
+        snprintf(overlay, sizeof(overlay), "%.1fs", remainingMs / 1000.f);
+        ImGui::ProgressBar(frac > 1.f ? 1.f : frac, ImVec2(-1, 14), overlay);
+
+        if (!localControls) ImGui::BeginDisabled();
+        if (ImGui::Button("Pass Turn", ImVec2(-1, 28))) {
+            puzzle.RequestPass();
+        }
+        if (!localControls) ImGui::EndDisabled();
     }
 
     ImGui::Spacing();

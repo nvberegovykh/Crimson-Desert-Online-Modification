@@ -104,6 +104,10 @@ enum class PacketType {
     LOOT_TAKEN,
     CUTSCENE_START,
     CUTSCENE_END,
+    PUZZLE_START,
+    PUZZLE_TOKEN,
+    PUZZLE_PASS,
+    PUZZLE_END,
     UNKNOWN,
 };
 
