@@ -27,10 +27,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(minhook)
 
-# Expose MinHook headers to all targets that link it
-target_include_directories(minhook PUBLIC
-    ${minhook_SOURCE_DIR}/include
-)
 
 # --- Dear ImGui (no CMake of its own; we compile the sources) -------------
 FetchContent_Declare(
@@ -94,6 +90,7 @@ target_compile_definitions(dxgi PRIVATE
 
 target_include_directories(dxgi PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${minhook_SOURCE_DIR}/include
 )
 
 target_link_libraries(dxgi PRIVATE
