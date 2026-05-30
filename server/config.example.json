@@ -1,0 +1,9 @@
+{
+  "port": 7777,
+  "maxPlayers": 8,
+  "password": "",
+  "friendlyFire": false,
+  "tickRate": 20,
+  "sessionName": "My CD Server",
+  "adminToken": "changeme"
+}

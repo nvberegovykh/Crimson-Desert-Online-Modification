@@ -1,0 +1,41 @@
+# --- Node / server ---
+node_modules/
+server/dist/
+server/config.json
+npm-debug.log*
+yarn-error.log
+*.tsbuildinfo
+
+# --- C++ / client ---
+client/build/
+client/out/
+client/cmake-build-*/
+*.obj
+*.o
+*.lib
+*.exp
+*.pdb
+*.ilk
+*.dll
+*.exe
+
+# Allow committing the dxgi .def even though *.dll is ignored
+!client/src/proxy/dxgi.def
+
+# --- CMake artifacts ---
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+_deps/
+
+# --- Editor / OS ---
+.vscode/
+.idea/
+.vs/
+*.user
+.DS_Store
+Thumbs.db
+
+# --- Runtime caches ---
+offsets_cache.json
+client.log

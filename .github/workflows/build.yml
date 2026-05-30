@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: MIT
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  server:
+    name: Server (Node 20)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Install dependencies
+        run: npm ci || npm install
+      - name: Type-check & build
+        run: npm run build
+
+  client:
+    name: Client (Windows x64)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure (CMake, x64)
+        run: cmake -B build -A x64
+        working-directory: client
+      - name: Build (Release)
+        run: cmake --build build --config Release
+        working-directory: client
+      - name: Upload dxgi.dll artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dxgi-dll
+          path: client/build/Release/dxgi.dll
+          if-no-files-found: warn
