@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "player_sync.h"
+#include <windows.h>
 #include "../game/offsets.h"
 #include "../net/client.h"
 #include "../util/log.h"
