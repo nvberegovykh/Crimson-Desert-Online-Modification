@@ -20,6 +20,10 @@ CombatSync g_combatSync;
 using AttackFn = void(__fastcall*)(void* self);
 AttackFn g_origAttack = nullptr;
 
+// The skill trigger: `void CastSkill(Entity* self, int skillId)`.
+using SkillFn = void(__fastcall*)(void* self, int skillId);
+SkillFn g_origSkill = nullptr;
+
 void __fastcall HookedAttack(void* self) {
     // Emit our RPC first so latency is minimized, then run the real attack.
     const uintptr_t base = GetLocalPlayerBase();
@@ -30,6 +34,25 @@ void __fastcall HookedAttack(void* self) {
         GetCombatSync().OnLocalAttack(animId, dir, 0);
     }
     if (g_origAttack) g_origAttack(self);
+}
+
+void __fastcall HookedSkill(void* self, int skillId) {
+    const uintptr_t base = GetLocalPlayerBase();
+    if (base != 0) {
+        // Read phase + target from the skill component populated by the engine
+        // as the cast begins. Offsets mirror player_sync's ReadLocalGameplay.
+        Vec3 targetPos;
+        int32_t phase = 0;
+        int32_t targetEntity = 0;
+        if (g_offsets.skillComponentOffset != 0) {
+            const uintptr_t sc = base + g_offsets.skillComponentOffset;
+            phase = ReadInt(sc, 0x04);
+            targetEntity = ReadInt(sc, 0x0C);
+            targetPos = ReadVec3(sc, 0x10);
+        }
+        GetCombatSync().OnLocalSkill(skillId, phase, targetPos, targetEntity);
+    }
+    if (g_origSkill) g_origSkill(self, skillId);
 }
 } // namespace
 
@@ -53,12 +76,29 @@ bool CombatSync::InstallHooks() {
     }
     hooksInstalled_ = true;
     CDMP_LOG_INFO("Combat attack hook installed");
+
+    // Skill activation hook (best-effort; attack sync still works without it).
+    if (g_offsets.skillTriggerFn != 0) {
+        if (MH_CreateHook(reinterpret_cast<void*>(g_offsets.skillTriggerFn),
+                          reinterpret_cast<void*>(&HookedSkill),
+                          reinterpret_cast<void**>(&g_origSkill)) == MH_OK &&
+            MH_EnableHook(reinterpret_cast<void*>(g_offsets.skillTriggerFn)) ==
+                MH_OK) {
+            CDMP_LOG_INFO("Combat skill hook installed");
+        } else {
+            CDMP_LOG_WARN("skill hook install failed; skill sync disabled");
+        }
+    } else {
+        CDMP_LOG_WARN("skill trigger not resolved; skill hook disabled");
+    }
     return true;
 }
 
 void CombatSync::RemoveHooks() {
     if (!hooksInstalled_) return;
     MH_DisableHook(reinterpret_cast<void*>(g_offsets.attackTriggerFn));
+    if (g_offsets.skillTriggerFn != 0)
+        MH_DisableHook(reinterpret_cast<void*>(g_offsets.skillTriggerFn));
     hooksInstalled_ = false;
 }
 
@@ -71,6 +111,44 @@ void CombatSync::OnLocalAttack(int32_t animId, const Vec3& direction,
                    {"direction",
                     {{"x", direction.x}, {"y", direction.y}, {"z", direction.z}}},
                    {"targetEntityId", targetEntityId}});
+}
+
+void CombatSync::OnLocalSkill(int32_t skillId, int32_t phase,
+                              const Vec3& targetPos, int32_t targetEntity) {
+    if (!client_ || !client_->IsConnected()) return;
+    client_->Send(PacketType::RPC_CALL,
+                  {{"type", "skill"},
+                   {"skillId", skillId},
+                   {"phase", phase},
+                   {"targetPos",
+                    {{"x", targetPos.x}, {"y", targetPos.y}, {"z", targetPos.z}}},
+                   {"targetEntity", targetEntity}});
+}
+
+void CombatSync::HandleSkillRpc(const nlohmann::json& rpc) {
+    // Write the skill state onto the source remote entity's combat component so
+    // the engine plays the skill VFX + animation. No host adjudication needed:
+    // skills are visual; damage still flows through the attack/damage RPCs.
+    const std::string source = rpc.value("sourceId", std::string());
+    if (source.empty() || source == localId_ || !remoteResolver_) return;
+    const uintptr_t base = remoteResolver_(source);
+    if (base == 0 || g_offsets.skillComponentOffset == 0 ||
+        !IsReadable(base, 0x800)) {
+        return;
+    }
+    const int32_t skillId = rpc.value("skillId", 0);
+    const int32_t phase = rpc.value("phase", 0);
+    int32_t targetEntity = rpc.value("targetEntity", 0);
+    Vec3 targetPos;
+    if (rpc.contains("targetPos")) {
+        const auto& t = rpc["targetPos"];
+        targetPos = {t.value("x", 0.f), t.value("y", 0.f), t.value("z", 0.f)};
+    }
+    const uintptr_t sc = base + g_offsets.skillComponentOffset;
+    WriteInt(sc, 0x00, skillId);
+    WriteInt(sc, 0x04, phase);
+    WriteInt(sc, 0x0C, targetEntity);
+    WriteVec3(sc, 0x10, targetPos);
 }
 
 void CombatSync::HandleAttackRpc(const nlohmann::json& rpc) {

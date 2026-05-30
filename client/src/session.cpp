@@ -21,6 +21,10 @@ void Session::Init() {
 
     playerSync_.SetClient(client_.get());
     GetCombatSync().SetClient(client_.get());
+    GetCombatSync().SetRemoteEntityResolver(
+        [this](const std::string& id) {
+            return playerSync_.GetRemoteEntityBase(id);
+        });
     CDMP_LOG_INFO("Session controller initialized");
 }
 
@@ -173,6 +177,8 @@ void Session::OnPacket(PacketType type, const nlohmann::json& d) {
                 GetCombatSync().HandleDamageRpc(d);
             } else if (rpcType == "enemy_update") {
                 GetCombatSync().HandleEnemyUpdate(d);
+            } else if (rpcType == "skill") {
+                GetCombatSync().HandleSkillRpc(d);
             }
             break;
         }

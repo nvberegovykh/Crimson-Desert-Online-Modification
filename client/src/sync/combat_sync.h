@@ -7,9 +7,11 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <mutex>
 #include <string>
+#include <utility>
 
 #include "../game/memory.h"
 #include <nlohmann/json.hpp>
@@ -41,6 +43,20 @@ public:
     void OnLocalAttack(int32_t animId, const Vec3& direction,
                        uint64_t targetEntityId);
 
+    // Called by the skill hook trampoline: emit a skill RPC.
+    void OnLocalSkill(int32_t skillId, int32_t phase, const Vec3& targetPos,
+                      int32_t targetEntity);
+
+    // Apply an incoming skill RPC by writing into the source entity's combat
+    // component so the engine plays the skill VFX + animation.
+    void HandleSkillRpc(const nlohmann::json& rpc);
+
+    // Resolve the remote entity slot for a player id (used by skill writes).
+    void SetRemoteEntityResolver(
+        std::function<uintptr_t(const std::string&)> resolver) {
+        remoteResolver_ = std::move(resolver);
+    }
+
     // Host: validate an incoming attack RPC and broadcast a damage result.
     void HandleAttackRpc(const nlohmann::json& rpc);
 
@@ -64,6 +80,7 @@ private:
 
     std::mutex mutex_;
     std::map<std::string, EnemyMirror> enemies_;
+    std::function<uintptr_t(const std::string&)> remoteResolver_;
 };
 
 // Global accessor so the C-style hook trampoline can reach the instance.
