@@ -12,7 +12,7 @@ struct Entry {
     PacketType type;
     const char* name;
 };
-constexpr std::array<Entry, 18> kTable = {{
+constexpr std::array<Entry, 20> kTable = {{
     {PacketType::HANDSHAKE, "HANDSHAKE"},
     {PacketType::HANDSHAKE_ACK, "HANDSHAKE_ACK"},
     {PacketType::JOIN_REQUEST, "JOIN_REQUEST"},
@@ -31,6 +31,8 @@ constexpr std::array<Entry, 18> kTable = {{
     {PacketType::KICK, "KICK"},
     {PacketType::SERVER_INFO, "SERVER_INFO"},
     {PacketType::LOOT_TAKEN, "LOOT_TAKEN"},
+    {PacketType::CUTSCENE_START, "CUTSCENE_START"},
+    {PacketType::CUTSCENE_END, "CUTSCENE_END"},
 }};
 } // namespace
 

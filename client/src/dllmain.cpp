@@ -15,6 +15,7 @@
 #include "hooks/render_hook.h"
 #include "inventory/inventory_hook.h"
 #include "sync/combat_sync.h"
+#include "sync/cutscene_sync.h"
 #include "session.h"
 #include "util/log.h"
 
@@ -59,6 +60,9 @@ DWORD WINAPI InitThread(LPVOID) {
     //    pre-creates the hook objects when the function is known).
     cdmp::GetCombatSync().InstallHooks();
 
+    // 8) Cutscene detection (function hook + poll fallback).
+    cdmp::CutsceneSync::Get().Init();
+
     g_initialized = true;
     CDMP_LOG_INFO("CD Multiplayer client ready");
     return 0;
@@ -66,6 +70,7 @@ DWORD WINAPI InitThread(LPVOID) {
 
 void Shutdown() {
     if (!g_initialized) return;
+    cdmp::CutsceneSync::Get().Shutdown();
     cdmp::InventoryHook::Get().Shutdown();
     cdmp::RemoveRenderHook();
     cdmp::Session::Get().Shutdown();

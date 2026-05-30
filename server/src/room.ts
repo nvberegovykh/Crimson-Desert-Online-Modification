@@ -13,6 +13,7 @@ import {
   type PlayerLeavePayload,
   type StateUpdatePayload,
   type EnemyUpdatePayload,
+  type CutscenePayload,
 } from "./protocol";
 import {
   ServerState,
@@ -165,6 +166,24 @@ export class Room {
   /** Replace the room's enemy snapshot (host-authoritative). */
   submitEnemies(enemies: EnemyState[]): void {
     this.state.setEnemies(enemies);
+  }
+
+  /**
+   * A player entered (active=true) or left (active=false) a cutscene. Update the
+   * authoritative state and notify everyone else so their UI / suspend logic can
+   * react. Returns false when the player is unknown.
+   */
+  setCutscene(playerId: string, active: boolean): boolean {
+    if (!this.connections.has(playerId)) return false;
+    this.state.setCutscene(playerId, active);
+    const type = active ? PacketType.CUTSCENE_START : PacketType.CUTSCENE_END;
+    const payload: CutscenePayload = { playerId };
+    this.broadcastExcept(playerId, encode(type, payload));
+    log.info(
+      `Room ${this.inviteCode}: ${playerId} cutscene ` +
+        (active ? "started" : "ended")
+    );
+    return true;
   }
 
   broadcast(raw: string): void {

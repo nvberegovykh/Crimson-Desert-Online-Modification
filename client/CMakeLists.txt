@@ -62,6 +62,7 @@ set(CDMP_SOURCES
     src/net/protocol.cpp
     src/sync/player_sync.cpp
     src/sync/combat_sync.cpp
+    src/sync/cutscene_sync.cpp
     src/util/log.cpp
 )
 

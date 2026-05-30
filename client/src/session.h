@@ -47,6 +47,17 @@ public:
     std::string LastError();
     bool FriendlyFire() const { return friendlyFire_.load(); }
 
+    // Local player id (server-assigned uuid). Thread-safe.
+    std::string LocalId();
+
+    // True while the local player is inside a cutscene (state sync suspended).
+    bool CutsceneActive() const { return cutsceneActive_.load(); }
+    void SetCutsceneActive(bool active) { cutsceneActive_.store(active); }
+
+    // Underlying network client (used by the sync subsystems). May be null
+    // before Init().
+    WsClient* Client() { return client_.get(); }
+
     PlayerSync& Players() { return playerSync_; }
 
 private:
@@ -63,6 +74,7 @@ private:
     std::atomic<bool> isHost_{false};
     std::atomic<bool> friendlyFire_{false};
     std::atomic<bool> wantCreate_{false};
+    std::atomic<bool> cutsceneActive_{false};
 
     std::mutex stateMutex_;
     std::string localId_;

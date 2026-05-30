@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "session.h"
+#include "sync/cutscene_sync.h"
 #include "util/log.h"
 
 #include <windows.h>
@@ -69,6 +70,7 @@ void Session::LeaveSession() {
     playerSync_.Clear();
     status_.store(SessionStatus::Disconnected);
     isHost_.store(false);
+    cutsceneActive_.store(false);
     CDMP_LOG_INFO("Left session");
 }
 
@@ -200,6 +202,12 @@ void Session::OnPacket(PacketType type, const nlohmann::json& d) {
         case PacketType::LOOT_TAKEN:
             GetCombatSync().HandleLootTaken(d);
             break;
+        case PacketType::CUTSCENE_START:
+            playerSync_.SetRemoteCutscene(d.value("playerId", std::string()), true);
+            break;
+        case PacketType::CUTSCENE_END:
+            playerSync_.SetRemoteCutscene(d.value("playerId", std::string()), false);
+            break;
         case PacketType::KICK: {
             std::lock_guard<std::mutex> lock(stateMutex_);
             lastError_ = "Kicked: " + d.value("reason", std::string());
@@ -221,6 +229,7 @@ void Session::OnPacket(PacketType type, const nlohmann::json& d) {
 void Session::Tick() {
     const double now = static_cast<double>(GetTickCount64());
     if (status_.load() == SessionStatus::InSession) {
+        CutsceneSync::Get().Poll(now);
         playerSync_.Tick(now);
         if (now - lastPingMs_ > 2000.0) {
             lastPingMs_ = now;
@@ -247,6 +256,10 @@ std::string Session::ServerName() {
 std::string Session::LastError() {
     std::lock_guard<std::mutex> lock(stateMutex_);
     return lastError_;
+}
+std::string Session::LocalId() {
+    std::lock_guard<std::mutex> lock(stateMutex_);
+    return localId_;
 }
 
 } // namespace cdmp

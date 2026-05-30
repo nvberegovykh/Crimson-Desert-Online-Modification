@@ -246,7 +246,9 @@ void Modal::RenderInSession() {
         for (const RemotePlayer& p : sess.Players().GetRemotePlayers()) {
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
-            ImGui::TextUnformatted(p.name.empty() ? p.id.c_str() : p.name.c_str());
+            std::string label = p.name.empty() ? p.id : p.name;
+            if (p.inCutscene) label += " (cutscene)";
+            ImGui::TextUnformatted(label.c_str());
             ImGui::TableSetColumnIndex(1);
             const float frac =
                 p.maxHealth > 0 ? p.currentHealth / p.maxHealth : 0.f;

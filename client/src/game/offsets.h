@@ -20,6 +20,10 @@ struct GameOffsets {
     uintptr_t itemUseFn = 0;       // item interaction function
     uintptr_t attackTriggerFn = 0; // melee/attack trigger function
     uintptr_t skillTriggerFn = 0;  // skill/magic activation function
+    uintptr_t cutsceneFn = 0;      // cutscene start/end routine (hook target)
+    uintptr_t cinematicFlagPtr = 0;// bool flag near the camera component
+    uintptr_t puzzleInputFn = 0;   // puzzle/interaction input handler
+    uintptr_t puzzleTriggerFn = 0; // puzzle object interaction trigger
 
     // --- Field offsets within the player entity struct --------------------
     uint32_t offPositionX = 0;     // float[3] world position

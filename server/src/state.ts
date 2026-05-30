@@ -51,6 +51,7 @@ export interface PlayerState {
   animState: AnimState;
   isHost: boolean;
   ping: number;
+  inCutscene: boolean;
   traversalState?: TraversalState;
 
   // --- Full gameplay sync (magic / VFX / buffs / weapons / mounts / death) ---
@@ -107,6 +108,7 @@ export function createPlayerState(id: string, name: string): PlayerState {
     animState: defaultAnimState(),
     isHost: false,
     ping: 0,
+    inCutscene: false,
   };
 }
 
@@ -311,6 +313,11 @@ export class ServerState {
       cur.interactionType = patch.interactionType;
     if (typeof patch.interactionEntityId === "number")
       cur.interactionEntityId = patch.interactionEntityId;
+  }
+
+  setCutscene(id: string, active: boolean): void {
+    const p = this.players.get(id);
+    if (p) p.inCutscene = active;
   }
 
   setHost(id: string): void {

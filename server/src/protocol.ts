@@ -24,6 +24,8 @@ export enum PacketType {
   KICK = "KICK",
   SERVER_INFO = "SERVER_INFO",
   LOOT_TAKEN = "LOOT_TAKEN",
+  CUTSCENE_START = "CUTSCENE_START",
+  CUTSCENE_END = "CUTSCENE_END",
 }
 
 /** Generic envelope every packet uses on the wire. */
@@ -151,6 +153,11 @@ export interface LootTakenPayload {
   /** Stable identifier of the looted world object. */
   lootId: string;
   /** Player who took the loot. */
+  playerId: string;
+}
+
+export interface CutscenePayload {
+  /** Player entering/leaving the cutscene. */
   playerId: string;
 }
 

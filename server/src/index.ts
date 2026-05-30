@@ -125,6 +125,12 @@ function handlePacket(
     case PacketType.LOOT_TAKEN:
       onLootTaken(session, payload as LootTakenPayload, manager);
       break;
+    case PacketType.CUTSCENE_START:
+      onCutscene(session, manager, true);
+      break;
+    case PacketType.CUTSCENE_END:
+      onCutscene(session, manager, false);
+      break;
     case PacketType.PING:
       onPing(session, payload as PingPayload, manager);
       break;
@@ -353,6 +359,18 @@ function onLootTaken(
     playerId: payload.playerId,
   };
   room.broadcastExcept(room.hostPlayerId, encode(PacketType.LOOT_TAKEN, msg));
+}
+
+function onCutscene(
+  session: Session,
+  manager: RoomManager,
+  active: boolean
+): void {
+  const room = manager.getRoomForPlayer(session.playerId);
+  if (!room) return;
+  // A client may only toggle its own cutscene state; the room broadcasts the
+  // change to everyone else.
+  room.setCutscene(session.playerId, active);
 }
 
 function onPing(

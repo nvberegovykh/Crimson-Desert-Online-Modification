@@ -102,6 +102,8 @@ enum class PacketType {
     KICK,
     SERVER_INFO,
     LOOT_TAKEN,
+    CUTSCENE_START,
+    CUTSCENE_END,
     UNKNOWN,
 };
 

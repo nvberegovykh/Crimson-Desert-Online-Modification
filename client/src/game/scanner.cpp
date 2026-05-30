@@ -173,6 +173,15 @@ const char* kAttackSig =
 const char* kSkillSig =
     "48 89 5C 24 ?? 48 89 6C 24 ?? 57 48 83 EC ?? 8B EA 48 8B D9";
 
+// Anchor for the cutscene/cinematic begin routine. Representative BDO-engine
+// prologue that toggles the cinematic camera state.
+const char* kCutsceneSig =
+    "48 89 5C 24 ?? 48 89 6C 24 ?? 57 48 83 EC ?? 0F B6 EA";
+
+// Anchor for the interaction/puzzle input dispatch function.
+const char* kPuzzleSig =
+    "40 55 53 56 57 48 8D 6C 24 ?? 48 81 EC ?? ?? ?? ?? 8B F2";
+
 // Resolve a RIP-relative reference at `addr` where the 4-byte displacement
 // begins at addr+dispOffset and the instruction length is `insnLen`.
 uintptr_t ResolveRipRelative(uintptr_t addr, int dispOffset, int insnLen) {
@@ -423,6 +432,12 @@ bool ResolveOffsets() {
     g_offsets.itemUseFn = ScanPattern(nullptr, kItemUseSig);
     g_offsets.attackTriggerFn = ScanPattern(nullptr, kAttackSig);
     g_offsets.skillTriggerFn = ScanPattern(nullptr, kSkillSig);
+
+    // 3b) Cutscene + puzzle interaction functions (optional; both features have
+    //     polling / manual fallbacks when these are not found).
+    g_offsets.cutsceneFn = ScanPattern(nullptr, kCutsceneSig);
+    g_offsets.puzzleInputFn = ScanPattern(nullptr, kPuzzleSig);
+    g_offsets.puzzleTriggerFn = g_offsets.puzzleInputFn;
 
     // 4) Walk the live entity struct to identify field offsets.
     const uintptr_t entity = GetLocalPlayerBase();

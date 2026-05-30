@@ -41,6 +41,7 @@ void PlayerSync::Tick(double nowMs) {
 
 void PlayerSync::SendLocalState(double nowMs) {
     if (!client_ || !client_->IsConnected()) return;
+    if (suspended_.load()) return; // e.g. local player is in a cutscene
     if (nowMs - lastSendMs_ < kSendIntervalMs) return;
     lastSendMs_ = nowMs;
 
@@ -304,6 +305,8 @@ void PlayerSync::ApplyStateUpdate(const nlohmann::json& players) {
         if (p.contains("maxHealth")) rp.maxHealth = p["maxHealth"].get<float>();
         if (p.contains("isHost")) rp.isHost = p["isHost"].get<bool>();
         if (p.contains("ping")) rp.ping = p["ping"].get<int>();
+        if (p.contains("inCutscene") && p["inCutscene"].is_boolean())
+            rp.inCutscene = p["inCutscene"].get<bool>();
         if (p.contains("animState")) {
             const auto& a = p["animState"];
             const int32_t newAnim = a.value("anim_id", rp.lastAnim.anim_id);
@@ -699,6 +702,12 @@ void PlayerSync::AddRemotePlayer(const std::string& id, const std::string& name)
 void PlayerSync::RemoveRemotePlayer(const std::string& id) {
     std::lock_guard<std::mutex> lock(mutex_);
     remotes_.erase(id);
+}
+
+void PlayerSync::SetRemoteCutscene(const std::string& id, bool inCutscene) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto it = remotes_.find(id);
+    if (it != remotes_.end()) it->second.inCutscene = inCutscene;
 }
 
 void PlayerSync::Clear() {

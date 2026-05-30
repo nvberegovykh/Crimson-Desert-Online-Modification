@@ -6,10 +6,12 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <map>
 #include <mutex>
 #include <string>
+#include <vector>
 
 #include "../game/memory.h"
 #include "../net/protocol.h"
@@ -40,6 +42,7 @@ struct RemotePlayer {
     uintptr_t entityBase = 0;    // resolved remote entity slot, if any
     bool isHost = false;
     int ping = 0;
+    bool inCutscene = false;     // true while this remote is in a cutscene
 
     // Parkour / traversal + full gameplay state from the latest packet.
     PlayerStatePacket gameplay;
@@ -56,6 +59,11 @@ public:
     void SetClient(WsClient* client) { client_ = client; }
     void SetLocalId(const std::string& id) { localId_ = id; }
 
+    // While suspended, the local 20Hz STATE_UPDATE/ANIMATION_UPDATE send is
+    // skipped (e.g. during a cutscene). Remote application keeps running.
+    void SetSuspended(bool suspended) { suspended_.store(suspended); }
+    bool IsSuspended() const { return suspended_.load(); }
+
     // Called every frame; internally rate-limits to 20Hz.
     void Tick(double nowMs);
 
@@ -65,6 +73,7 @@ public:
 
     void AddRemotePlayer(const std::string& id, const std::string& name);
     void RemoveRemotePlayer(const std::string& id);
+    void SetRemoteCutscene(const std::string& id, bool inCutscene);
     void Clear();
 
     // Snapshot for the in-session UI.
@@ -80,6 +89,7 @@ private:
     WsClient* client_ = nullptr;
     std::string localId_;
     double lastSendMs_ = 0.0;
+    std::atomic<bool> suspended_{false};
 
     std::mutex mutex_;
     std::map<std::string, RemotePlayer> remotes_;
