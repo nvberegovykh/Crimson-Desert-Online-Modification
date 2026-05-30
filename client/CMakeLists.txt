@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 cmake_minimum_required(VERSION 3.20)
-project(cd_multiplayer_client LANGUAGES CXX)
+project(cd_multiplayer_client LANGUAGES CXX C)
 
 if(NOT WIN32)
     message(FATAL_ERROR "The client plugin builds for Windows x64 only.")
@@ -19,14 +19,21 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(nlohmann_json)
 
-# --- MinHook --------------------------------------------------------------
+# --- MinHook (built as static lib from source) ----------------------------
 FetchContent_Declare(
     minhook
     GIT_REPOSITORY https://github.com/TsudaKageyu/minhook.git
     GIT_TAG v1.3.3
 )
-FetchContent_MakeAvailable(minhook)
-
+FetchContent_Populate(minhook)
+add_library(minhook_lib STATIC
+    ${minhook_SOURCE_DIR}/src/buffer.c
+    ${minhook_SOURCE_DIR}/src/hook.c
+    ${minhook_SOURCE_DIR}/src/trampoline.c
+    ${minhook_SOURCE_DIR}/src/hde/hde32.c
+    ${minhook_SOURCE_DIR}/src/hde/hde64.c
+)
+target_include_directories(minhook_lib PUBLIC ${minhook_SOURCE_DIR}/include)
 
 # --- Dear ImGui (no CMake of its own; we compile the sources) -------------
 FetchContent_Declare(
@@ -90,12 +97,11 @@ target_compile_definitions(dxgi PRIVATE
 
 target_include_directories(dxgi PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${minhook_SOURCE_DIR}/include
 )
 
 target_link_libraries(dxgi PRIVATE
     imgui
-    minhook
+    minhook_lib
     nlohmann_json::nlohmann_json
     d3d11
     dxguid
